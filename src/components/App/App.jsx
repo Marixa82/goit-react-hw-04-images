@@ -1,86 +1,86 @@
 
-import React, { Component } from "react";
+// import React, { Component } from "react";
 import { AppSheet } from "./App.styled";
 import { ToastContainer, toast } from "react-toastify";
 import 'react-toastify/dist/ReactToastify.css';
-import {Searchbar} from "../Searchbar/Searchbar";
+import Searchbar from "../Searchbar/Searchbar";
 import {CreateGallery} from "../ImageGallery/ImageGallery";
 import { Button } from "../Button/Button";
 import { Loader } from "../Loader/Loader";
 import * as API from 'services/api'
+import { useEffect, useState } from "react";
 
-export default class App extends Component {
-  state = {
-    searchQuery: '',
-    page: 1,
-    hits: [],
-    isLoading: false,
-    isError: false,
-    BtnLoadMore: false,
-  }
- 
-  fetchData=async()=> {
-      const {searchQuery, page} = this.state;
-      this.setState({ isLoading: true });
-    try {
-      const data = await API.fetchAllData(searchQuery, page);
-      const totalPages = Math.ceil(data.totalHits / 12);
-        if (data.hits.length === 0) {
-        toast.error("Sorry! There are no images matching your search query. Try again.")
+ export default function App ()  {
+  const [searchQuery, setSearchQuery] = useState('');
+  const [page, setPage] = useState(1);
+  const [hits, setHits] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [BtnLoadMore, setBtnLoadMore] = useState(true);
+  
+  
+   useEffect(() => {
+     if (searchQuery === '') {
+      return;
+    }
+     const fetchData = async () => {
+       setIsLoading(true);
+       try {
+         const data = await API.fetchAllData(searchQuery, page);
+         const totalPages = Math.ceil(data.totalHits / 12);
+      
+         if (data.hits.length === 0) {
+           toast.error("Sorry! There are no images matching your search query. Try again.")
+          } 
+         setHits(hits => [...hits, ...data.hits]);
+
+         if (page === 1) {
+           toast.success(`Wonderful! We found ${data.totalHits} images! Continue`);
+           return;
+         } else {
+           setTimeout(() => scroll(), 100);
+         }
+         if (page >= totalPages) {
+           toast.info("Sorry! This is the end of search results! Ok");
+           setBtnLoadMore(false);
+          }
+         if (page < totalPages) {
+          setBtnLoadMore(true);
         }
-      this.setState(({hits}) => ({
-        hits:[...hits, ...data.hits], totalPages, 
-      }));
-      if(page ===1){
-            toast.success(`Wonderful! We found ${data.totalHits} images! Continue`)
-      } else {
-        setTimeout(()=> this.scroll(),100);
-      }
-        if (page >= totalPages) {
-        toast.info("Sorry! This is the end of search results! Ok")
-            }
-    }catch (error) {
-      this.setState({ isError: true, Error});
-    } finally {
-          this.setState({ isLoading: false });
-      }
-  };
-scroll = () => {
+       }catch (error) {
+         Error(true, Error);
+       }finally {
+         (setIsLoading(false));
+        }
+     };
+     fetchData();
+   },[searchQuery, page]);
+   
+   const scroll = () => {
     const { clientHeight } = document.documentElement;
     window.scrollBy({
       top: clientHeight - 180,
       behavior: 'smooth',
     });
   }
-  componentDidUpdate(prevProps, prevState) {
-    const { searchQuery, page } = this.state;
-       if (prevState.searchQuery !== searchQuery || prevState.page !== page) {
-       this.fetchData();
-    }
-    }
-    
-  handleSearchQuery = searchQuery => {
-    this.setState({ searchQuery, page:1, hits: [] });
-  }
-  handleLoadMore = () => {
-    this.setState(prevState => ({
-      page: prevState.page + 1,
-    }));
+const handleSearchQuery = (searchQuery) => {
+    setSearchQuery(searchQuery);
+    setPage(1);
+    setHits([]);
   };
-  render() {
-    const { hits, isLoading, page, totalPages} = this.state;
-    return (
+const handleLoadMore = () => {
+    setPage(prevPage => prevPage + 1);
+  }
+  return (
       <>
-        <Searchbar onSubmit={this.handleSearchQuery} />
+        <Searchbar onSubmit={handleSearchQuery} />
         <AppSheet>
           {hits.length !== 0 && <CreateGallery hits={hits} />}
           {isLoading ? (<Loader />) :
-            (page<totalPages && hits.length!==0 &&<Button onLoadMore={this.handleLoadMore} />)}
+            (BtnLoadMore && hits.length!==0 &&<Button onLoadMore={handleLoadMore} />)}
           </AppSheet>
         <ToastContainer autoClose={3000} />
       </>
     )
   }
-} 
 
 
